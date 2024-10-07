@@ -9,39 +9,37 @@ public partial class Terrain : MeshInstance3D {
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready() {
 		GD.Randomize();
+
+		var fnl = new FastNoiseLite();
+		long fnlSeed = GD.Randi() - 2147483648; // 2^31
+		fnl.SetSeed((int)fnlSeed);
+		fnl.SetNoiseType(FastNoiseLite.NoiseTypeEnum.Simplex);
+
 		var st = new SurfaceTool();
 
 		// st.Begin(Mesh.PrimitiveType.Triangles);
 
-		// var vertices = new System.Collections.Generic.List<Vector3>(mapSize * mapSize);
 		var vertices = new Vector3[mapSize * mapSize];
-		var colors = new Color[mapSize * mapSize];
-		// var indices = new System.Collections.Generic.List<int>((mapSize - 1) * (mapSize - 1) * 6);
+		// var colors = new Color[mapSize * mapSize];
 		var indices = new int[(mapSize - 1) * (mapSize - 1) * 6];
 
 		// Vertices
 		for (int z = 0; z < mapSize; z++) {
 			for (int x = 0; x < mapSize; x++)  {
-				float y = GD.Randf();
-
-				// st.SetColor(new Color(y, y, y));
-				// st.AddVertex(new Vector3(x - ((mapSize - 1) / 2.0f), y, z - ((mapSize - 1) / 2.0f)));
+				// float y = GD.Randf();
+				float xCoord = x - ((mapSize - 1) * 0.5f);
+				float zCoord = z - ((mapSize - 1) * 0.5f);
+				float y = (fnl.GetNoise2D(xCoord, zCoord) + 0.5f) * 0.5f; // 0 - 1
+				float yScaled = y * 20.0f;
 
 				int i = mapSize * z + x;
-				vertices[i] = new Vector3(x - ((mapSize - 1) / 2.0f), y, z - ((mapSize - 1) / 2.0f));
-				colors[i] = new Color(y, y, y);
+				vertices[i] = new Vector3(xCoord, yScaled, zCoord);
+				// colors[i] = new Color(y, y, y);
 			}
 		}
 		// Clockwise-wound indices
 		for (int z = 0; z < mapSize - 1; z++) {
 			for (int x = 0; x < mapSize - 1; x++) {
-				// st.AddIndex(mapSize * z + x);
-				// st.AddIndex(mapSize * z + x + 1);
-				// st.AddIndex(mapSize * (z + 1) + x);
-
-				// st.AddIndex(mapSize * z + x + 1);
-				// st.AddIndex(mapSize * (z + 1) + x + 1);
-				// st.AddIndex(mapSize * (z + 1) + x);
 
 				int i = ((mapSize - 1) * z + x) * 6;
 				
@@ -59,12 +57,11 @@ public partial class Terrain : MeshInstance3D {
 		arrays.Resize((int)Mesh.ArrayType.Max);
 		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
 		arrays[(int)Mesh.ArrayType.Index] = indices;
-		arrays[(int)Mesh.ArrayType.Color] = colors;
+		// arrays[(int)Mesh.ArrayType.Color] = colors;
 		st.CreateFromArrays(arrays);
 
 		st.GenerateNormals();
 
-		// Commit to a mesh.
 		// Consider using ArrayMesh directly and calculate normals using custom function
 		var mesh = st.Commit((ArrayMesh)GetMesh());
 	}
