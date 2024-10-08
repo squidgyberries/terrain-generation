@@ -5,6 +5,14 @@ using System.Linq;
 public partial class Terrain : MeshInstance3D {
 	[Export]
 	private int mapSize = 11;
+	[Export]
+	private float initialAmplitude = 20.0f;
+	[Export]
+	private int octaves = 6;
+	[Export]
+	private int lacunarity = 2;
+	[Export]
+	private float persistence = 0.5f;
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready() {
@@ -23,19 +31,40 @@ public partial class Terrain : MeshInstance3D {
 		// var colors = new Color[mapSize * mapSize];
 		var indices = new int[(mapSize - 1) * (mapSize - 1) * 6];
 
-		// Vertices
+		// Vertex generation
+		// Initialize x and z coordinates for vertices first
 		for (int z = 0; z < mapSize; z++) {
-			for (int x = 0; x < mapSize; x++)  {
-				// float y = GD.Randf();
+			for (int x = 0; x < mapSize; x++) {
+				int i = mapSize * z + x;
+
 				float xCoord = x - ((mapSize - 1) * 0.5f);
 				float zCoord = z - ((mapSize - 1) * 0.5f);
-				float y = (fnl.GetNoise2D(xCoord, zCoord) + 0.5f) * 0.5f; // 0 - 1
-				float yScaled = y * 20.0f;
-
-				int i = mapSize * z + x;
-				vertices[i] = new Vector3(xCoord, yScaled, zCoord);
-				// colors[i] = new Color(y, y, y);
+				vertices[i] = new Vector3(xCoord, 0.0f, zCoord);
 			}
+		}
+		// Fractal noise
+		float amplitude = initialAmplitude;
+		for (int octave = 0; octave < octaves; octave++) {
+			for (int z = 0; z < mapSize; z++) {
+				for (int x = 0; x < mapSize; x++)  {
+					int i = mapSize * z + x;
+
+					float xCoord = x - ((mapSize - 1) * 0.5f);
+					float zCoord = z - ((mapSize - 1) * 0.5f);
+
+					float xNoise = xCoord * Mathf.Pow(lacunarity, octave);
+					float zNoise = zCoord * Mathf.Pow(lacunarity, octave);
+
+					// float y = (fnl.GetNoise2D(xNoise, zNoise) + 0.5f) * 0.5f; // 0 - 1
+					float y = fnl.GetNoise2D(xNoise, zNoise) + 0.5f; // 0 - 2
+					y *= y;
+					float yScaled = y * amplitude;
+
+					vertices[i].Y += yScaled;
+					// colors[i] = new Color(y, y, y);
+				}
+			}
+			amplitude *= persistence;
 		}
 		// Clockwise-wound indices
 		for (int z = 0; z < mapSize - 1; z++) {
